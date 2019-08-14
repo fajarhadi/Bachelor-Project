@@ -19,7 +19,7 @@ Kalman kalmanLong;
 
 int satisfied;
 bool b_calibrated = false;
-bool deaccl, fall, stop;
+bool deaccl, fall, stahp;
 
 unsigned int EEP_CALIB_FLAG = 0;
 unsigned int EEP_ACC_BIAS = 1;
@@ -157,7 +157,7 @@ void setupEEPROM()
     loadCalibration();
 }
 
-bool get_GPS(void) { //THX FOR SOMEONE ON ARDUINO FORUM MADE ME HAVE THIS IDEA!!!//
+int8_t get_GPS() { //THX FOR SOMEONE ON ARDUINO FORUM MADE ME HAVE THIS IDEA!!!//
 
   int8_t counter, answer;
   long previous;
@@ -190,11 +190,6 @@ bool get_GPS(void) { //THX FOR SOMEONE ON ARDUINO FORUM MADE ME HAVE THIS IDEA!!
 
   frame[counter - 3] = '\0';
 
-  if (answer == 1){
-	return true;
-  } else {
-	return false;
-  }
   // Parses the string
   strtok(frame, ",");
   strcpy(Fixstatus, strtok(NULL, ",")); // Gets GNSS run status
@@ -297,7 +292,7 @@ void sendUrl() {
 	delay(1000);
 	
     Serial.println("Getting position......");
-    if(get_GPS()){                                     //Get the current position
+    /*if(kXpost != NULL && kYpost != NULL){                                     //Get the current position
         Serial.print(" Longitude : ");
         Serial.println(kXpost, 8);                    //Get longitude
         Serial.print(" Latitude : ");
@@ -316,7 +311,11 @@ void sendUrl() {
         sim7000.httpGet(senturl);
     }else{
         Serial.println("Wrong data try again");
-    }
+    }*/
+	Serial.print("Latitude : ");
+	Serial.print(kXpost, 8);
+	Serial.print(" Longitude : ");
+	Serial.println(kYpost, 8);
 }
 
 bool deAcc(bool *deaccl) {
@@ -325,21 +324,21 @@ bool deAcc(bool *deaccl) {
 	float c = mpu.getAccZ();
 	float d = sqrt(pow(a,2)+pow(b,2)+pow(c,2));
 	if(d > 4) {
-		deaccl = true;
+		*deaccl = true;
 	} else {
-		deaccl = false;
+		*deaccl = false;
 	}
 }
 
 bool fell(float kalAngleX, float kalAngleY, bool *fall) {
 	if (kalAngleX > 50 || kalAngleY > 70){
-		fall = true;
+		*fall = true;
 	} else {
-		fall = false;
+		*fall = false;
 	}
 }
 
-bool stop(){
+bool stopIt(){
 } // belum beres
 
 /*THIS IS WHERE ARDUINO START ROCK'IN !!!!!!!!!!!!!!!*/
@@ -366,14 +365,18 @@ void setup()
        }
 	  delay(3000);
 	  
+	  timer = micros();
 	  mpu.update();
+	  get_GPS();
 	  
+	  fLat = atof (latitude);
+	  fLong = atof (logitude);
 	  float roll = mpu.getRoll();
 	  float pitch = mpu.getPitch();
 	  float a = mpu.getAccX();
 	  float b = mpu.getAccY();
 	  
-	  timer = micros();
+	  
 	  kalmanX.setAngle(roll); // Set starting angle
 	  kalmanY.setAngle(pitch);
 	  
@@ -383,8 +386,8 @@ void setup()
 	  kalmanX.setQangle(a);
 	  kalmanY.setQangle(b);
 	  
-	  kalmanLat.setAngle(latitude);kalmanLat.setQbias(0.00003);
-	  kalmanLong.setAngle(logitude);kalmanLong.setQbias(0.00003);
+	  kalmanLat.setAngle(fLat);kalmanLat.setQbias(0.00003);
+	  kalmanLong.setAngle(fLong);kalmanLong.setQbias(0.00003);
 	  
 	  delay(0);
 }
@@ -392,7 +395,6 @@ void setup()
 
 void loop()
 {
-	
 	mpu.update();
 	timer = micros();
 	double dt = (double)(micros() - timer) / 1000000; // Calculate delta timer
@@ -400,7 +402,6 @@ void loop()
 	float pitch = mpu.getPitch();
 	float gyroXrate = mpu.getGyroX() ;
 	float gyroYrate = mpu.getGyroY() ;
-  //mpu.update();
 	
 	#ifdef RESTRICT_PITCH
 	// This fixes the transition problem when the accelerometer angle jumps between -180 and 180 degrees
@@ -423,9 +424,7 @@ void loop()
     gyroXrate = -gyroXrate; // Invert rate, so it fits the restriced accelerometer reading
   kalAngleX = kalmanX.getAngle(roll, gyroXrate, dt); // Calculate the angle using a Kalman filter
 #endif
-	//mpu.update();
 	//mpu.print(); // data belom terfilter*/
-	//Serial.print();
 	
   /*Serial.print("pitch : ");
   Serial.print("90");
@@ -440,5 +439,5 @@ void loop()
   
   
   
-	delay(0);
+	delay(500);
 }
