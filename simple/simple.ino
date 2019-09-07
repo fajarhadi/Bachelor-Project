@@ -294,6 +294,7 @@ void sendData() {
   fSpeed = atof (speedOTG);
   kXpost = kalmanLong.getAngle(fLong, fSpeed, dt);
   kYpost = kalmanLat.getAngle(fLat, fSpeed, dt);
+  
   delay(1000);
 
   Serial.println("Getting position......");
@@ -303,11 +304,11 @@ void sendData() {
     Serial.print(" Longitude : ");
     Serial.println(kXpost, 8);                     //Get latitude
     String latlng = String();
-    latlng += "1";
+	latlng += "1";
     latlng += "/";
     latlng += String(kYpost,7);
     latlng += "/";
-    latlng += kXpost;
+    latlng += String(kXpost,7);
     String surl = GETURL + latlng;
     int len = surl.length() + 1;
     char senturl[len];
@@ -321,11 +322,11 @@ void sendData() {
   && simSMS.sendSMS() == false) {
     Serial.println("Getting position for sms......");
     String latlng = String();
-    latlng += "Kecelakaan Tabrakan ""\r\n";
+    latlng += "Kecelakaan Tabrakan ";
     latlng += "Latitude: ";
-    latlng += (kYpost,8);
+    latlng += String(kYpost,7);
     latlng += "Longitude: ";
-    latlng += kXpost;
+    latlng += String(kXpost,7);
     String smsM = latlng;
     String phoneN = GETNUM;
     int len = smsM.length() + 1;
@@ -345,9 +346,9 @@ void sendData() {
     String latlng = String();
     latlng += "Kecelakaan jatuh";
     latlng += "Latitude: ";
-    latlng += kYpost;
+    latlng += String(kYpost,7);
     latlng += "Longitude: ";
-    latlng += kXpost;
+    latlng += String(kXpost,7);
     String smsM = latlng;
     String phoneN = GETNUM;
     int len = smsM.length() + 1;
@@ -367,9 +368,9 @@ void sendData() {
     String latlng = String();
     latlng += "Kecelakaan jatuh high vel";
     latlng += "Latitude: ";
-    latlng += kYpost;
+    latlng += String(kYpost,7);
     latlng += "Longitude: ";
-    latlng += kXpost;
+    latlng += String(kXpost,7);
     String smsM = latlng;
     String phoneN = GETNUM;
     int len = smsM.length() + 1;
@@ -417,7 +418,7 @@ bool stopIt() {
 
 void setup()
 {
-  setupModuleSim();
+ // setupModuleSim();
   Serial.begin(115200);
   Wire.begin();
   Serial.print("If satisfied using calibrated data press 1, if not satisfied or not yet calibrate Press 2");
@@ -497,12 +498,15 @@ void loop()
   kalAngleX = kalmanX.getAngle(roll, gyroXrate, dt); // Calculate the angle using a Kalman filter
 #endif
   //mpu.print(); // data belom terfilter*/
+  Serial.print(kalAngleY);
+  Serial.print(" ");
+  Serial.println(pitch);
  
-  if (messageSent == true) {
+  /*if (messageSent == true) {
 	messageSent = false;
 	delay(10000);
   } else {
 	sendData();
-  }
-  delay(500);
+  }*/
+  delay(0);
 }
