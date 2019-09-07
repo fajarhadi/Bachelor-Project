@@ -52,7 +52,7 @@ class MPU9250_
 
     QuaternionFilter qFilter;
 
-    float magnetic_declination = -7.51; // Japan, 24th June
+    float magnetic_declination = 0.68; // Bandung, 7th Sept
 
 public:
 
@@ -359,7 +359,7 @@ private:
         a12 =   2.0f * (q[1] * q[2] + q[0] * q[3]);
         a22 =   q[0] * q[0] + q[1] * q[1] - q[2] * q[2] - q[3] * q[3];
         a31 =   2.0f * (q[0] * q[1] + q[2] * q[3]);
-        a32 =   2.0f * (q[1] * q[3] - q[0] * q[2]);
+        a32 =   2.0f * ((q[1] * q[3]) - (q[0] * q[2]));
         a33 =   q[0] * q[0] - q[1] * q[1] - q[2] * q[2] + q[3] * q[3];
         pitch = -asinf(a32);
         roll  = atan2f(a31, a33);
