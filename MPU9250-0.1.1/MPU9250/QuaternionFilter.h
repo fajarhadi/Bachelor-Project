@@ -7,8 +7,8 @@ class QuaternionFilter
 
     float GyroMeasError = PI * (40.0f / 180.0f);   // gyroscope measurement error in rads/s (start at 40 deg/s)
     float GyroMeasDrift = PI * (0.0f  / 180.0f);   // gyroscope measurement drift in rad/s/s (start at 0.0 deg/s/s)
-    float beta = sqrt(3.0f / 4.0f) * GyroMeasError;   // compute beta
-    float zeta = sqrt(3.0f / 4.0f) * GyroMeasDrift;   // compute zeta, the other free parameter in the Madgwick scheme usually set to a small or zero value
+    float beta = sqrtf(3.0f / 4.0f) * GyroMeasError;   // compute beta
+    float zeta = sqrtf(3.0f / 4.0f) * GyroMeasDrift;   // compute zeta, the other free parameter in the Madgwick scheme usually set to a small or zero value
     const float Kp = 2.0f * 5.0f; // these are the free parameters in the Mahony filter and fusion scheme, Kp for proportional feedback, Ki for integral
     const float Ki = 0.0f;
 
@@ -24,7 +24,7 @@ public:
     void bind() {}
 
     // MadgwickQuaternionUpdate
-    void update(float ax, float ay, float az, float gx, float gy, float gz, float mx, float my, float mz, float* q)
+    void update(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz, float *q)
     {
         // updateParams()
         float q1 = q[0], q2 = q[1], q3 = q[2], q4 = q[3];   // short name local variable for readability

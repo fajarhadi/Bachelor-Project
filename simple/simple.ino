@@ -199,11 +199,9 @@ int8_t get_GPS() { //THX FOR SOMEONE ON ARDUINO FORUM MADE ME HAVE THIS IDEA!!!/
   strcpy(Fixstatus, strtok(NULL, ",")); // Gets GNSS run status
   strcpy(UTCdatetime, strtok(NULL, ",")); // Gets Fix status
   memcpy(latitude, strtok(NULL, ","), 7); // Gets UTC date & time
-  memcpy(logitude, strtok(NULL, ","), 7); // Gets longitude
+  memcpy(logitude, strtok(NULL, ","), 9); // Gets longitude
   strcpy(altitude, strtok(NULL, ",")); // Gets MSL altitude
   strcpy(speedOTG, strtok(NULL, ",")); // Gets speed over ground
- 
-  //return speedOTG;
 }
 
 void setupModuleSim() {
@@ -285,15 +283,15 @@ void setupModuleSim() {
   }
 }
 
-void sendData() {
+void sendData(double &dt) {
   get_GPS();
-  double dt = (double)(micros() - timer) / 1000000; // Calculate delta time
-  timer = micros();
+  double *deltaT = &dt;
+  //timer = micros();
   fLat = atof (latitude);
   fLong = atof (logitude);
   fSpeed = atof (speedOTG);
-  kXpost = kalmanLong.getAngle(fLong, fSpeed, dt);
-  kYpost = kalmanLat.getAngle(fLat, fSpeed, dt);
+  kXpost = kalmanLong.getAngle(fLong, fSpeed, *deltaT);
+  kYpost = kalmanLat.getAngle(fLat, fSpeed, *deltaT);
   
   delay(1000);
 
@@ -305,86 +303,157 @@ void sendData() {
     Serial.println(kXpost, 8);                     //Get latitude
     String latlng = String();
 	latlng += "1";
+	latlng += "/";
+	latlng += String(fLat, 7);
+	latlng += "/";
+	latlng += String(fLong, 7);
+	latlng += "/";
+    latlng += String(kYpost,8);
     latlng += "/";
-    latlng += String(kYpost,7);
-    latlng += "/";
-    latlng += String(kXpost,7);
+    latlng += String(kXpost,7);;
     String surl = GETURL + latlng;
     int len = surl.length() + 1;
     char senturl[len];
     surl.toCharArray(senturl, len);
     Serial.println(senturl);
     sim7000.httpGet(senturl);
-  } else {
-    Serial.println("Wrong data try again");
   }
-  if (deAcc() == true && fallen(kalAngleX, kalAngleY) == true 
-  && simSMS.sendSMS() == false) {
+  /*if (deAcc() == true && fallen(kalAngleX, kalAngleY) == true 
+  && simSMS.sendSMS() == false && kXpost != 0 && kYpost != 0) {
     Serial.println("Getting position for sms......");
-    String latlng = String();
-    latlng += "Kecelakaan Tabrakan ";
-    latlng += "Latitude: ";
-    latlng += String(kYpost,7);
-    latlng += "Longitude: ";
-    latlng += String(kXpost,7);
-    String smsM = latlng;
+    String latlngS = String();
+    latlngS += "Kecelakaan Tabrakan ";
+    latlngS += "Latitude: ";
+    latlngS += String(kYpost,7);
+    latlngS += "Longitude: ";
+    latlngS += String(kXpost,7);
+    String smsM = latlngS;
     String phoneN = GETNUM;
-    int len = smsM.length() + 1;
+    int lenS = smsM.length() + 1;
     int lenP = phoneN.length() + 1;
-    char sentSms[len];
+    char sentSms[lenS];
     char phoneNumber[lenP];
-    smsM.toCharArray(sentSms, len);
+    smsM.toCharArray(sentSms, lenS);
     phoneN.toCharArray(phoneNumber, lenP);
     simSMS.beginSMS(phoneNumber);
     simSMS.editSMS(sentSms);
     simSMS.sendSMS();
+	
+	Serial.println("Getting position for OTA......");
+	Serial.print(" Latitude : "); 					//send data OTA
+    Serial.println(kYpost, 8);                    //Get longitude
+    Serial.print(" Longitude : ");
+    Serial.println(kXpost, 8);                     //Get latitude
+    String latlng = String();
+	latlng += "1";
+	latlng += "/";
+	latlng += String(fLat, 7);
+	latlng += "/";
+	latlng += String(fLong, 7);
+	latlng += "/";
+    latlng += String(kYpost,7);
+    latlng += "/";
+    latlng += String(kXpost,7);
+	latlng += "0";
+	String surl = GETURL + latlng;
+    int len = surl.length() + 1;
+    char senturl[len];
+    surl.toCharArray(senturl, len);
+    Serial.println(senturl);
+    sim7000.httpGet(senturl);
 	messageSent = true;
 	Serial.print(" CRASH ");
   } else if (deAcc() == false && fallen(kalAngleX, kalAngleY) ==  true 
   && simSMS.sendSMS() == false) {
     Serial.println("Getting position for sms......");
-    String latlng = String();
-    latlng += "Kecelakaan jatuh";
-    latlng += "Latitude: ";
-    latlng += String(kYpost,7);
-    latlng += "Longitude: ";
-    latlng += String(kXpost,7);
-    String smsM = latlng;
+    String latlngS = String();
+    latlngS += "Kecelakaan jatuh";
+    latlngS += "Latitude: ";
+    latlngS += String(kYpost,7);
+    latlngS += "Longitude: ";
+    latlngS += String(kXpost,7);
+    String smsM = latlngS;
     String phoneN = GETNUM;
-    int len = smsM.length() + 1;
+    int lenS = smsM.length() + 1;
     int lenP = phoneN.length() + 1;
-    char sentSms[len];
+    char sentSms[lenS];
     char phoneNumber[lenP];
-    smsM.toCharArray(sentSms, len);
+    smsM.toCharArray(sentSms, lenS);
     phoneN.toCharArray(phoneNumber, lenP);
     simSMS.beginSMS(phoneNumber);
     simSMS.editSMS(sentSms);
     simSMS.sendSMS();
+	
+	Serial.println("Getting position for OTA......");
+	Serial.print(" Latitude : "); 					//send data OTA
+    Serial.println(kYpost, 8);                    //Get longitude
+    Serial.print(" Longitude : ");
+    Serial.println(kXpost, 8);                     //Get latitude
+    String latlng = String();
+	latlng += "1";
+	latlng += "/";
+	latlng += String(fLat, 7);
+	latlng += "/";
+	latlng += String(fLong, 7);
+	latlng += "/";
+    latlng += String(kYpost,7);
+    latlng += "/";
+    latlng += String(kXpost,7);
+	latlng += "1";
+	String surl = GETURL + latlng;
+    int len = surl.length() + 1;
+    char senturl[len];
+    surl.toCharArray(senturl, len);
+    Serial.println(senturl);
+    sim7000.httpGet(senturl);
 	messageSent = true;
 	Serial.print(" FALL ");
   } else if (fSpeed > 10 && fallen(kalAngleX, kalAngleY) == true 
   && simSMS.sendSMS() == false) {
     Serial.println("Getting position for sms...... CRASH HIGH VELOCITY");
-    String latlng = String();
-    latlng += "Kecelakaan jatuh high vel";
-    latlng += "Latitude: ";
-    latlng += String(kYpost,7);
-    latlng += "Longitude: ";
-    latlng += String(kXpost,7);
-    String smsM = latlng;
+    String latlngS = String();
+    latlngS += "Kecelakaan jatuh high vel";
+    latlngS += "Latitude: ";
+    latlngS += String(kYpost,7);
+    latlngS += "Longitude: ";
+    latlngS += String(kXpost,7);
+    String smsM = latlngS;
     String phoneN = GETNUM;
-    int len = smsM.length() + 1;
+    int lenS = smsM.length() + 1;
     int lenP = phoneN.length() + 1;
-    char sentSms[len];
+    char sentSms[lenS];
     char phoneNumber[lenP];
-    smsM.toCharArray(sentSms, len);
+    smsM.toCharArray(sentSms, lenS);
     phoneN.toCharArray(phoneNumber, lenP);
     simSMS.beginSMS(phoneNumber);
     simSMS.editSMS(sentSms);
     simSMS.sendSMS();
+	
+	Serial.println("Getting position for OTA......");
+	Serial.print(" Latitude : "); 					//send data OTA
+    Serial.println(kYpost, 8);                    //Get longitude
+    Serial.print(" Longitude : ");
+    Serial.println(kXpost, 8);                     //Get latitude
+    String latlng = String();
+	latlng += "1";
+	latlng += "/";
+	latlng += String(fLat, 7);
+	latlng += "/";
+	latlng += String(fLong, 7);
+	latlng += "/";
+    latlng += String(kYpost,7);
+    latlng += "/";
+    latlng += String(kXpost,7);
+	latlng += "2";
+	String surl = GETURL + latlng;
+    int len = surl.length() + 1;
+    char senturl[len];
+    surl.toCharArray(senturl, len);
+    Serial.println(senturl);
+    sim7000.httpGet(senturl);
 	messageSent = true;
 	Serial.print(" CRASH HIGH VELOCITY ");
-  } else
+  }*/ else
   {
     Serial.println("Wrong data try again");
   }
@@ -411,14 +480,11 @@ bool fallen(float angleX, float angleY) {
   }
 }
 
-bool stopIt() {
-} // belum beres
-
 /*THIS IS WHERE ARDUINO START ROCK'IN !!!!!!!!!!!!!!!*/
 
 void setup()
 {
- // setupModuleSim();
+  setupModuleSim();
   Serial.begin(115200);
   Wire.begin();
   Serial.print("If satisfied using calibrated data press 1, if not satisfied or not yet calibrate Press 2");
@@ -438,7 +504,7 @@ void setup()
   }
   delay(3000);
 
-  timer = micros();
+  //timer = micros();
   mpu.update();
   get_GPS();
 
@@ -498,15 +564,14 @@ void loop()
   kalAngleX = kalmanX.getAngle(roll, gyroXrate, dt); // Calculate the angle using a Kalman filter
 #endif
   //mpu.print(); // data belom terfilter*/
-  Serial.print(kalAngleY);
-  Serial.print(" ");
-  Serial.println(pitch);
- 
+  
   /*if (messageSent == true) {
 	messageSent = false;
 	delay(10000);
   } else {
 	sendData();
   }*/
+  sendData(dt);
   delay(0);
+
 }

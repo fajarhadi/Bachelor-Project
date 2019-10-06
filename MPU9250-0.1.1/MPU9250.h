@@ -140,7 +140,8 @@ public:
         // get quaternion based on aircraft coordinate (Right-Hand, X-Forward, Z-Down)
         // acc[mg], gyro[deg/s], mag [mG]
         // gyro will be convert from [deg/s] to [rad/s] inside of this function
-        qFilter.update(-a[0], a[1], a[2], g[0], -g[1], -g[2], m[1], -m[0], m[2], q);
+		qFilter.update(g[0], -g[1], -g[2], -a[0], a[1], a[2], m[1], -m[0], m[2], q);
+		//qFilter.update(a[0], -a[1], -a[2], g[0], -g[1], -g[2], m[1], -m[0], m[2], q);
 
         if (!b_ahrs)
         {
@@ -225,13 +226,13 @@ public:
     void printRollPitchYaw() const
     {
         Serial.print("Yaw, Pitch, Roll: ");
-        //Serial.print(yaw, 2);
-       // Serial.print(", ");
+        Serial.print(yaw, 2);
+       Serial.print(", ");
 		Serial.print("\t");
         Serial.print(pitch, 2);
 		Serial.println("\t");
-        //Serial.print(", ");
-        //Serial.println(roll, 2);
+        Serial.print(", ");
+        Serial.println(roll, 2);
     }
 
     void printCalibration() const
