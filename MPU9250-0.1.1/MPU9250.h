@@ -141,8 +141,6 @@ public:
         // acc[mg], gyro[deg/s], mag [mG]
         // gyro will be convert from [deg/s] to [rad/s] inside of this function
 		qFilter.update(g[0], -g[1], -g[2], -a[0], a[1], a[2], m[1], -m[0], m[2], q);
-		//qFilter.update(a[0], -a[1], -a[2], g[0], -g[1], -g[2], m[1], -m[0], m[2], q);
-
         if (!b_ahrs)
         {
             tempCount = readTempData();  // Read the adc values
@@ -360,7 +358,7 @@ private:
         a12 =   2.0f * (q[1] * q[2] + q[0] * q[3]);
         a22 =   q[0] * q[0] + q[1] * q[1] - q[2] * q[2] - q[3] * q[3];
         a31 =   2.0f * (q[0] * q[1] + q[2] * q[3]);
-        a32 =   2.0f * ((q[1] * q[3]) - (q[0] * q[2]));
+        a32 =   2.0f * (q[1] * q[3] - q[0] * q[2]);
         a33 =   q[0] * q[0] - q[1] * q[1] - q[2] * q[2] + q[3] * q[3];
         pitch = -asinf(a32);
         roll  = atan2f(a31, a33);

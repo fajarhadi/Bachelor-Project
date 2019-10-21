@@ -8,7 +8,7 @@
 #define RESTRICT_PITCH
 #define PIN_TX     7
 #define PIN_RX     10
-#define GETURL     "http://iot.rahiemy.id/ins/"
+#define GETURL     "apps.rahiemy.id/iot2/ins/"
 #define GETNUM	   "082243925585"
 
 SoftwareSerial     mySerial(PIN_RX, PIN_TX);
@@ -43,6 +43,7 @@ char logitude[11];
 char altitude[8];
 char speedOTG[6];
 float fLat, fLong, fSpeed, kXpost, kYpost;
+double u = 0;
 
 bool isCalibrated()
 {
@@ -295,8 +296,7 @@ void sendData(double &dt) {
   
   delay(1000);
 
-  Serial.println("Getting position......");
-  if (kXpost != 0 && kYpost != 0) {                                   //Get the current position
+  if (deAcc(dt) == false && fallen(kalAngleX, kalAngleY) == true && kXpost != 0 && kYpost != 0) {                                   //Get the current position
     Serial.print(" Latitude : ");
     Serial.println(kYpost, 8);                    //Get longitude
     Serial.print(" Longitude : ");
@@ -310,7 +310,10 @@ void sendData(double &dt) {
 	latlng += "/";
     latlng += String(kYpost,8);
     latlng += "/";
-    latlng += String(kXpost,7);;
+    latlng += String(kXpost,7);
+	latlng += "/";
+	latlng += "0";
+    Serial.println("Getting position......");
     String surl = GETURL + latlng;
     int len = surl.length() + 1;
     char senturl[len];
@@ -318,15 +321,17 @@ void sendData(double &dt) {
     Serial.println(senturl);
     sim7000.httpGet(senturl);
   }
-  /*if (deAcc() == true && fallen(kalAngleX, kalAngleY) == true 
-  && simSMS.sendSMS() == false && kXpost != 0 && kYpost != 0) {
-    Serial.println("Getting position for sms......");
+  else if (deAcc(dt) == true && fallen(kalAngleX, kalAngleY) == true 
+  && simSMS.sendSMS() == false && kXpost != 0 && kYpost != 0 ) {
+    Serial.println("Getting position for sms......CRASH");
     String latlngS = String();
     latlngS += "Kecelakaan Tabrakan ";
-    latlngS += "Latitude: ";
-    latlngS += String(kYpost,7);
-    latlngS += "Longitude: ";
-    latlngS += String(kXpost,7);
+	latlngS += " ";
+    latlngS += "Link Lokasi: ";
+	latlngS += "https://www.google.com/maps?saddr=My+Location&daddr=";
+	latlngS += String(kYpost,7);
+	latlngS += ",";
+	latlngS += String(kXpost,7);
     String smsM = latlngS;
     String phoneN = GETNUM;
     int lenS = smsM.length() + 1;
@@ -354,7 +359,9 @@ void sendData(double &dt) {
     latlng += String(kYpost,7);
     latlng += "/";
     latlng += String(kXpost,7);
-	latlng += "0";
+	latlng += "/";
+	latlng += "1";
+	
 	String surl = GETURL + latlng;
     int len = surl.length() + 1;
     char senturl[len];
@@ -362,16 +369,18 @@ void sendData(double &dt) {
     Serial.println(senturl);
     sim7000.httpGet(senturl);
 	messageSent = true;
-	Serial.print(" CRASH ");
-  } else if (deAcc() == false && fallen(kalAngleX, kalAngleY) ==  true 
-  && simSMS.sendSMS() == false) {
-    Serial.println("Getting position for sms......");
+	
+  } else if (deAcc(dt) == true && fallen(kalAngleX, kalAngleY) ==  true 
+  && simSMS.sendSMS() == false && kXpost != 0 && kYpost != 0 && fSpeed == 0) {
+    Serial.println("Getting position for sms...... FALL");
     String latlngS = String();
     latlngS += "Kecelakaan jatuh";
-    latlngS += "Latitude: ";
-    latlngS += String(kYpost,7);
-    latlngS += "Longitude: ";
-    latlngS += String(kXpost,7);
+    latlngS += " ";
+    latlngS += "Link Lokasi: ";
+	latlngS += "https://www.google.com/maps?saddr=My+Location&daddr=";
+	latlngS += String(kYpost,7);
+	latlngS += ",";
+	latlngS += String(kXpost,7);
     String smsM = latlngS;
     String phoneN = GETNUM;
     int lenS = smsM.length() + 1;
@@ -399,7 +408,9 @@ void sendData(double &dt) {
     latlng += String(kYpost,7);
     latlng += "/";
     latlng += String(kXpost,7);
-	latlng += "1";
+	latlng += "/";
+	latlng += "2";
+	
 	String surl = GETURL + latlng;
     int len = surl.length() + 1;
     char senturl[len];
@@ -407,16 +418,18 @@ void sendData(double &dt) {
     Serial.println(senturl);
     sim7000.httpGet(senturl);
 	messageSent = true;
-	Serial.print(" FALL ");
+	
   } else if (fSpeed > 10 && fallen(kalAngleX, kalAngleY) == true 
-  && simSMS.sendSMS() == false) {
+  && simSMS.sendSMS() == false && kXpost != 0 && kYpost != 0) {
     Serial.println("Getting position for sms...... CRASH HIGH VELOCITY");
     String latlngS = String();
-    latlngS += "Kecelakaan jatuh high vel";
-    latlngS += "Latitude: ";
-    latlngS += String(kYpost,7);
-    latlngS += "Longitude: ";
-    latlngS += String(kXpost,7);
+    latlngS += "Kecelakaan jatuh HIGH VELOCITY";
+    latlngS += " ";
+    latlngS += "Link Lokasi: ";
+	latlngS += "https://www.google.com/maps?saddr=My+Location&daddr=";
+	latlngS += String(kYpost,7);
+	latlngS += ",";
+	latlngS += String(kXpost,7);
     String smsM = latlngS;
     String phoneN = GETNUM;
     int lenS = smsM.length() + 1;
@@ -444,7 +457,8 @@ void sendData(double &dt) {
     latlng += String(kYpost,7);
     latlng += "/";
     latlng += String(kXpost,7);
-	latlng += "2";
+	latlng += "/";
+	latlng += "3";
 	String surl = GETURL + latlng;
     int len = surl.length() + 1;
     char senturl[len];
@@ -452,31 +466,42 @@ void sendData(double &dt) {
     Serial.println(senturl);
     sim7000.httpGet(senturl);
 	messageSent = true;
-	Serial.print(" CRASH HIGH VELOCITY ");
-  }*/ else
+	
+  } else
   {
     Serial.println("Wrong data try again");
   }
 
 }
 
-bool deAcc() {
+bool deAcc(double &dt) {
   float a = mpu.getAccX();
   float b = mpu.getAccY();
   float c = mpu.getAccZ();
   float d = sqrt(pow(a, 2) + pow(b, 2) + pow(c, 2));
-  if (d > 4) {
-    return true;
+  float dd = (double) d;
+
+  double u,vC,vB;
+  double *t = &dt;
+  vC = u + dd * *t; /*velocity*/
+  vB = u;
+  u = vC;
+  
+  if (vB > vC && d < (-4)) {
+	return true;
   } else {
     return false;
   }
 }
 
 bool fallen(float angleX, float angleY) {
-  if (angleX > 50 || angleY > 70) {
+  if (angleX >= 45 || angleX <= -45) {
     return true;
-  } else {
-    return false;
+  } else if (angleY >= 45 || angleY <= -45){
+    return true;
+  }
+  else {
+	  return false;
   }
 }
 
@@ -484,7 +509,7 @@ bool fallen(float angleX, float angleY) {
 
 void setup()
 {
-  setupModuleSim();
+  //setupModuleSim();
   Serial.begin(115200);
   Wire.begin();
   Serial.print("If satisfied using calibrated data press 1, if not satisfied or not yet calibrate Press 2");
@@ -512,18 +537,14 @@ void setup()
   fLong = atof (logitude);
   float roll = mpu.getRoll();
   float pitch = mpu.getPitch();
-  float a = mpu.getAccX();
-  float b = mpu.getAccY();
 
 
   kalmanX.setAngle(roll); // Set starting angle
   kalmanY.setAngle(pitch);
 
-  kalmanX.setQbias(30);
-  kalmanY.setQbias(60);
+  kalmanX.setQbias(3);
+  kalmanY.setQbias(6);
 
-  kalmanX.setQangle(a);
-  kalmanY.setQangle(b);
 
   kalmanLat.setAngle(fLat); kalmanLat.setQbias(0.00003);
   kalmanLong.setAngle(fLong); kalmanLong.setQbias(0.00003);
@@ -541,37 +562,45 @@ void loop()
   float pitch = mpu.getPitch();
   float gyroXrate = mpu.getGyroX() ;
   float gyroYrate = mpu.getGyroY() ;
+  kalAngleX = kalmanX.getAngle(roll, gyroXrate, dt);
+  kalAngleY = kalmanY.getAngle(pitch, gyroXrate, dt);
 
 #ifdef RESTRICT_PITCH
   // This fixes the transition problem when the accelerometer angle jumps between -180 and 180 degrees
   if ((roll < -90 && kalAngleX > 90) || (roll > 90 && kalAngleX < -90)) {
-    kalmanX.setAngle(roll);
-  } else
-    kalAngleX = kalmanX.getAngle(roll, gyroXrate, dt); // Calculate the angle using a Kalman filter
+	  kalmanX.setAngle(roll);
+  }
+  else
+	  kalAngleX = kalmanX.getAngle(roll, gyroXrate, dt); // Calculate the angle using a Kalman filter
 
   if (abs(kalAngleX) > 90)
-    gyroYrate = -gyroYrate; // Invert rate, so it fits the restriced accelerometer reading
+	  gyroYrate = -gyroYrate; // Invert rate, so it fits the restriced accelerometer reading
   kalAngleY = kalmanY.getAngle(pitch, gyroYrate, dt);
 #else
   // This fixes the transition problem when the accelerometer angle jumps between -180 and 180 degrees
   if ((pitch < -90 && kalAngleY > 90) || (pitch > 90 && kalAngleY < -90)) {
-    kalmanY.setAngle(pitch);
-  } else
-    kalAngleY = kalmanY.getAngle(pitch, gyroXrate, dt); // Calculate the angle using a Kalman filter
+	  kalmanY.setAngle(pitch);
+  }
+  else
+	  kalAngleY = kalmanY.getAngle(pitch, gyroXrate, dt); // Calculate the angle using a Kalman filter
 
   if (abs(kalAngleY) > 90)
-    gyroXrate = -gyroXrate; // Invert rate, so it fits the restriced accelerometer reading
+	  gyroXrate = -gyroXrate; // Invert rate, so it fits the restriced accelerometer reading
   kalAngleX = kalmanX.getAngle(roll, gyroXrate, dt); // Calculate the angle using a Kalman filter
 #endif
-  //mpu.print(); // data belom terfilter*/
   
   /*if (messageSent == true) {
 	messageSent = false;
-	delay(10000);
+	//delay(10000);
   } else {
-	sendData();
+	sendData(dt);
   }*/
-  sendData(dt);
-  delay(0);
-
+ //sendData(dt);
+  Serial.print(kalAngleX);
+  Serial.print(" ");
+  Serial.print(roll);
+  Serial.print(" ");
+  Serial.print(pitch);
+  Serial.print(" ");
+  Serial.println(kalAngleY);
 }
