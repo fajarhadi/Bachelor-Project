@@ -1,4 +1,5 @@
 #include <EEPROM.h>
+#include "EEPROMExt.h"
 #include <MPU9250.h>
 #include "Kalman.h" // Source: https://github.com/TKJElectronics/KalmanFilter
 #include <Wire.h>
@@ -296,7 +297,7 @@ void sendData(double &dt) {
   
   delay(1000);
 
-  if (deAcc(dt) == false && fallen(kalAngleX, kalAngleY) == true && kXpost != 0 && kYpost != 0) {                                   //Get the current position
+  if (deAcc(dt,fSpeed) == false && fallen(kalAngleX, kalAngleY) == true && kXpost != 0 && kYpost != 0) {                                   //Get the current position
     Serial.print(" Latitude : ");
     Serial.println(kYpost, 8);                    //Get longitude
     Serial.print(" Longitude : ");
@@ -321,11 +322,11 @@ void sendData(double &dt) {
     Serial.println(senturl);
     sim7000.httpGet(senturl);
   }
-  else if (deAcc(dt) == true && fallen(kalAngleX, kalAngleY) == true 
+  else if (deAcc(dt,fSpeed) == true && fallen(kalAngleX, kalAngleY) == true
   && simSMS.sendSMS() == false && kXpost != 0 && kYpost != 0 ) {
     Serial.println("Getting position for sms......CRASH");
     String latlngS = String();
-    latlngS += "Kecelakaan Tabrakan ";
+    latlngS += "Kecelakaan Tabrakan atau jatuh";
 	latlngS += " ";
     latlngS += "Link Lokasi: ";
 	latlngS += "https://www.google.com/maps?saddr=My+Location&daddr=";
@@ -370,7 +371,7 @@ void sendData(double &dt) {
     sim7000.httpGet(senturl);
 	messageSent = true;
 	
-  } else if (deAcc(dt) == true && fallen(kalAngleX, kalAngleY) ==  true 
+  }/* else if (deAcc(dt,fSpeed) == true && fallen(kalAngleX, kalAngleY) ==  true
   && simSMS.sendSMS() == false && kXpost != 0 && kYpost != 0 && fSpeed == 0) {
     Serial.println("Getting position for sms...... FALL");
     String latlngS = String();
@@ -419,7 +420,7 @@ void sendData(double &dt) {
     sim7000.httpGet(senturl);
 	messageSent = true;
 	
-  } else if (fSpeed > 10 && fallen(kalAngleX, kalAngleY) == true 
+  }*/ else if (fSpeed > 10 && fallen(kalAngleX, kalAngleY) == true 
   && simSMS.sendSMS() == false && kXpost != 0 && kYpost != 0) {
     Serial.println("Getting position for sms...... CRASH HIGH VELOCITY");
     String latlngS = String();
@@ -474,20 +475,12 @@ void sendData(double &dt) {
 
 }
 
-bool deAcc(double &dt) {
+bool deAcc(double &dt, float &speed) {
   float a = mpu.getAccX();
   float b = mpu.getAccY();
   float c = mpu.getAccZ();
   float d = sqrt(pow(a, 2) + pow(b, 2) + pow(c, 2));
-  float dd = (double) d;
-
-  double u,vC,vB;
-  double *t = &dt;
-  vC = u + dd * *t; /*velocity*/
-  vB = u;
-  u = vC;
-  
-  if (vB > vC && d < (-4)) {
+  if (&speed == 0 && d < (4)) {
 	return true;
   } else {
     return false;
@@ -509,7 +502,7 @@ bool fallen(float angleX, float angleY) {
 
 void setup()
 {
-  //setupModuleSim();
+  setupModuleSim();
   Serial.begin(115200);
   Wire.begin();
   Serial.print("If satisfied using calibrated data press 1, if not satisfied or not yet calibrate Press 2");
@@ -527,8 +520,7 @@ void setup()
     clearing();
     setupEEPROM();
   }
-  delay(3000);
-
+  delay(8000);
   //timer = micros();
   mpu.update();
   get_GPS();
@@ -537,14 +529,17 @@ void setup()
   fLong = atof (logitude);
   float roll = mpu.getRoll();
   float pitch = mpu.getPitch();
+  float a = mpu.getAccX();
+  float b = mpu.getAccY();
+  float c = mpu.getAccZ();
+  float d = sqrt(pow(a, 2) + pow(b, 2) + pow(c, 2));
 
 
   kalmanX.setAngle(roll); // Set starting angle
   kalmanY.setAngle(pitch);
 
-  kalmanX.setQbias(3);
-  kalmanY.setQbias(6);
-
+  kalmanX.setQbias(184);
+  kalmanY.setQbias(72);
 
   kalmanLat.setAngle(fLat); kalmanLat.setQbias(0.00003);
   kalmanLong.setAngle(fLong); kalmanLong.setQbias(0.00003);
@@ -555,52 +550,25 @@ void setup()
 
 void loop()
 {
-  mpu.update();
-  timer = micros();
-  double dt = (double)(micros() - timer) / 1000000; // Calculate delta timer
-  float roll = mpu.getRoll();
-  float pitch = mpu.getPitch();
-  float gyroXrate = mpu.getGyroX() ;
-  float gyroYrate = mpu.getGyroY() ;
-  kalAngleX = kalmanX.getAngle(roll, gyroXrate, dt);
-  kalAngleY = kalmanY.getAngle(pitch, gyroXrate, dt);
+    static uint32_t prev_ms = millis();
+    if ((millis() - prev_ms) > 16)
+    {
+		mpu.update();
+		timer = micros();
+		double dt = (double)(micros() - timer) / 1000000; // Calculate delta timer
+		float rolls = mpu.getRoll();
+		float pitchs = mpu.getPitch();
+		float gyroXrate = mpu.getGyroX();
+		float gyroYrate = mpu.getGyroY();
+		kalAngleX = kalmanX.getAngle(rolls, gyroXrate, dt);
+		kalAngleY = kalmanY.getAngle(pitchs, gyroXrate, dt);
 
-#ifdef RESTRICT_PITCH
-  // This fixes the transition problem when the accelerometer angle jumps between -180 and 180 degrees
-  if ((roll < -90 && kalAngleX > 90) || (roll > 90 && kalAngleX < -90)) {
-	  kalmanX.setAngle(roll);
-  }
-  else
-	  kalAngleX = kalmanX.getAngle(roll, gyroXrate, dt); // Calculate the angle using a Kalman filter
-
-  if (abs(kalAngleX) > 90)
-	  gyroYrate = -gyroYrate; // Invert rate, so it fits the restriced accelerometer reading
-  kalAngleY = kalmanY.getAngle(pitch, gyroYrate, dt);
-#else
-  // This fixes the transition problem when the accelerometer angle jumps between -180 and 180 degrees
-  if ((pitch < -90 && kalAngleY > 90) || (pitch > 90 && kalAngleY < -90)) {
-	  kalmanY.setAngle(pitch);
-  }
-  else
-	  kalAngleY = kalmanY.getAngle(pitch, gyroXrate, dt); // Calculate the angle using a Kalman filter
-
-  if (abs(kalAngleY) > 90)
-	  gyroXrate = -gyroXrate; // Invert rate, so it fits the restriced accelerometer reading
-  kalAngleX = kalmanX.getAngle(roll, gyroXrate, dt); // Calculate the angle using a Kalman filter
-#endif
-  
-  /*if (messageSent == true) {
-	messageSent = false;
-	//delay(10000);
-  } else {
-	sendData(dt);
-  }*/
- //sendData(dt);
-  Serial.print(kalAngleX);
-  Serial.print(" ");
-  Serial.print(roll);
-  Serial.print(" ");
-  Serial.print(pitch);
-  Serial.print(" ");
-  Serial.println(kalAngleY);
+		if (messageSent == true) {
+		  messageSent = false;
+		  //delay(10000);
+		} else {
+		  sendData(dt);
+		}
+      prev_ms = millis();
+    }
 }
