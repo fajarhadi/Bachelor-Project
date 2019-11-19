@@ -36,7 +36,7 @@ class Kalman
     };
     
     /*
-    * The angle should be in degrees and the rate should be in degrees per second and the delta time in seconds
+    *The angle should be in degrees and the rate should be in degrees per second and the delta time in seconds
     */
     float getAngle(float newAngle, float newRate, float dt) 
     {

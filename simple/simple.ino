@@ -10,7 +10,7 @@
 #define PIN_TX     7
 #define PIN_RX     10
 #define GETURL     "apps.rahiemy.id/iot2/ins/"
-#define GETNUM	   "082243925585"
+#define GETNUM	   "082245431745"
 
 SoftwareSerial     mySerial(PIN_RX, PIN_TX);
 DFRobot_SIM7000    sim7000;
@@ -297,7 +297,7 @@ void sendData(double &dt) {
   
   delay(1000);
 
-  if (deAcc(dt,fSpeed) == false && fallen(kalAngleX, kalAngleY) == true && kXpost != 0 && kYpost != 0) {                                   //Get the current position
+  if (deAcc(dt,fSpeed) == false && fallen(kalAngleX, kalAngleY) == false && kXpost != 0 && kYpost != 0) {                                   //Get the current position
     Serial.print(" Latitude : ");
     Serial.println(kYpost, 8);                    //Get longitude
     Serial.print(" Longitude : ");
@@ -321,10 +321,14 @@ void sendData(double &dt) {
     surl.toCharArray(senturl, len);
     Serial.println(senturl);
     sim7000.httpGet(senturl);
+    
+ Serial.print(kalAngleX);
+ Serial.println(kalAngleY);
   }
-  else if (deAcc(dt,fSpeed) == true && fallen(kalAngleX, kalAngleY) == true
+  else if (deAcc(dt,fSpeed) == false && fallen(kalAngleX, kalAngleY) == true
   && simSMS.sendSMS() == false && kXpost != 0 && kYpost != 0 ) {
-    Serial.println("Getting position for sms......CRASH");
+    
+	Serial.println("Getting position for sms......CRASH");
     String latlngS = String();
     latlngS += "Kecelakaan Tabrakan atau jatuh";
 	latlngS += " ";
@@ -370,6 +374,8 @@ void sendData(double &dt) {
     Serial.println(senturl);
     sim7000.httpGet(senturl);
 	messageSent = true;
+ Serial.print(kalAngleX);
+ Serial.println(kalAngleY);
 	
   }/* else if (deAcc(dt,fSpeed) == true && fallen(kalAngleX, kalAngleY) ==  true
   && simSMS.sendSMS() == false && kXpost != 0 && kYpost != 0 && fSpeed == 0) {
@@ -480,7 +486,7 @@ bool deAcc(double &dt, float &speed) {
   float b = mpu.getAccY();
   float c = mpu.getAccZ();
   float d = sqrt(pow(a, 2) + pow(b, 2) + pow(c, 2));
-  if (&speed == 0 && d < (4)) {
+  if (&speed == 0 && d < (2)) {
 	return true;
   } else {
     return false;
@@ -488,9 +494,9 @@ bool deAcc(double &dt, float &speed) {
 }
 
 bool fallen(float angleX, float angleY) {
-  if (angleX >= 45 || angleX <= -45) {
+  if (angleX >= 20 || angleX <= -20) {
     return true;
-  } else if (angleY >= 45 || angleY <= -45){
+  } else if (angleY >= 20 || angleY <= -20){
     return true;
   }
   else {
@@ -550,9 +556,11 @@ void setup()
 
 void loop()
 {
-    static uint32_t prev_ms = millis();
-    if ((millis() - prev_ms) > 16)
-    {
+    static uint32_t period = 0.5 * 60000;
+	uint32_t tStart = millis();
+  double dt = (double)(micros() - timer) / 1000000;
+	while ((millis() - tStart) < period)
+	{
 		mpu.update();
 		timer = micros();
 		double dt = (double)(micros() - timer) / 1000000; // Calculate delta timer
@@ -564,11 +572,11 @@ void loop()
 		kalAngleY = kalmanY.getAngle(pitchs, gyroXrate, dt);
 
 		if (messageSent == true) {
-		  messageSent = false;
-		  //delay(10000);
-		} else {
-		  sendData(dt);
+			messageSent = false;
+			//delay(10000);
 		}
-      prev_ms = millis();
-    }
+	}
+	sendData(dt);
+  /* Serial.print(kalAngleX);
+   Serial.println(kalAngleY);*/
 }
