@@ -32,7 +32,7 @@ unsigned int EEP_GYRO_BIAS = 13;
 unsigned int EEP_MAG_BIAS = 25;
 unsigned int EEP_MAG_SCALE = 37;
 
-float kalAngleX, kalAngleY;
+float kalAngleX, kalAngleY, rolls, pitchs;
 uint32_t timer;
 
 char frame[256];
@@ -288,14 +288,11 @@ void setupModuleSim() {
 void sendData(double &dt) {
   get_GPS();
   double *deltaT = &dt;
-  //timer = micros();
-  fLat = atof (latitude);
-  fLong = atof (logitude);
-  fSpeed = atof (speedOTG);
-  kXpost = kalmanLong.getAngle(fLong, fSpeed, *deltaT);
-  kYpost = kalmanLat.getAngle(fLat, fSpeed, *deltaT);
-  
-  delay(1000);
+    fLat = atof (latitude);
+    fLong = atof (logitude);
+    fSpeed = atof (speedOTG);
+    kXpost = kalmanLong.getAngle(fLong, fSpeed, dt);
+    kYpost = kalmanLat.getAngle(fLat, fSpeed, dt);
 
   if (deAcc(dt,fSpeed) == false && fallen(kalAngleX, kalAngleY) == false && kXpost != 0 && kYpost != 0) {                                   //Get the current position
     Serial.print(" Latitude : ");
@@ -322,8 +319,8 @@ void sendData(double &dt) {
     Serial.println(senturl);
     sim7000.httpGet(senturl);
     
- Serial.print(kalAngleX);
- Serial.println(kalAngleY);
+ Serial.print(rolls);
+ Serial.println(pitchs);
   }
   else if (deAcc(dt,fSpeed) == false && fallen(kalAngleX, kalAngleY) == true
   && simSMS.sendSMS() == false && kXpost != 0 && kYpost != 0 ) {
@@ -374,8 +371,8 @@ void sendData(double &dt) {
     Serial.println(senturl);
     sim7000.httpGet(senturl);
 	messageSent = true;
- Serial.print(kalAngleX);
- Serial.println(kalAngleY);
+ Serial.print(rolls);
+ Serial.println(pitchs);
 	
   }/* else if (deAcc(dt,fSpeed) == true && fallen(kalAngleX, kalAngleY) ==  true
   && simSMS.sendSMS() == false && kXpost != 0 && kYpost != 0 && fSpeed == 0) {
@@ -494,9 +491,9 @@ bool deAcc(double &dt, float &speed) {
 }
 
 bool fallen(float angleX, float angleY) {
-  if (angleX >= 20 || angleX <= -20) {
+  if (angleX >= 45 || angleX <= -45) {
     return true;
-  } else if (angleY >= 20 || angleY <= -20){
+  } else if (angleY >= 45 || angleY <= -45){
     return true;
   }
   else {
@@ -511,7 +508,7 @@ void setup()
   setupModuleSim();
   Serial.begin(115200);
   Wire.begin();
-  Serial.print("If satisfied using calibrated data press 1, if not satisfied or not yet calibrate Press 2");
+  Serial.print("If satisfied using calibrated do nothing, if not satisfied or not yet calibrate Press 2");
   delay(5000);
   satisfied = Serial.read();
   Serial.println(satisfied);
@@ -526,8 +523,6 @@ void setup()
     clearing();
     setupEEPROM();
   }
-  delay(8000);
-  //timer = micros();
   mpu.update();
   get_GPS();
 
@@ -547,36 +542,44 @@ void setup()
   kalmanX.setQbias(184);
   kalmanY.setQbias(72);
 
-  kalmanLat.setAngle(fLat); kalmanLat.setQbias(0.00003);
-  kalmanLong.setAngle(fLong); kalmanLong.setQbias(0.00003);
-
-  delay(0);
+  kalmanLat.setAngle(fLat); kalmanLat.setQbias(0.000058);
+  kalmanLong.setAngle(fLong); kalmanLong.setQbias(0.0007);
 }
 
 
 void loop()
 {
-    static uint32_t period = 0.5 * 60000;
-	uint32_t tStart = millis();
+
+  /*mpu.update(); //for debug purposes
+    timer = micros();
+    double dt = (double)(micros() - timer) / 1000000; // Calculate delta timer
+    rolls = mpu.getRoll();
+    pitchs = mpu.getPitch();
+    float gyroXrate = mpu.getGyroX();
+    float gyroYrate = mpu.getGyroY();
+    kalAngleX = kalmanX.getAngle(rolls, gyroXrate, dt);
+    kalAngleY = kalmanY.getAngle(pitchs, gyroXrate, dt);*/
+  static uint32_t period = 0.5 * 60000;
+  uint32_t tStart = millis();
+  timer = micros();
   double dt = (double)(micros() - timer) / 1000000;
 	while ((millis() - tStart) < period)
 	{
 		mpu.update();
-		timer = micros();
-		double dt = (double)(micros() - timer) / 1000000; // Calculate delta timer
-		float rolls = mpu.getRoll();
-		float pitchs = mpu.getPitch();
+		//timer = micros();
+		//double dt = (double)(micros() - timer) / 1000000; // Calculate delta timer
+		rolls = mpu.getRoll();
+		pitchs = mpu.getPitch();
 		float gyroXrate = mpu.getGyroX();
 		float gyroYrate = mpu.getGyroY();
 		kalAngleX = kalmanX.getAngle(rolls, gyroXrate, dt);
 		kalAngleY = kalmanY.getAngle(pitchs, gyroXrate, dt);
-
 		if (messageSent == true) {
 			messageSent = false;
-			//delay(10000);
 		}
 	}
 	sendData(dt);
-  /* Serial.print(kalAngleX);
+   /*Serial.print(kalAngleX);//for debug purposes
+   Serial.print(" ");
    Serial.println(kalAngleY);*/
 }
